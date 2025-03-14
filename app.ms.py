@@ -9,7 +9,6 @@ import pandas as pd
 import logging
 import sys
 import re
-import base64
 from collections import defaultdict
 from datetime import datetime
 from typing import Dict,List,Optional,Union
@@ -21,17 +20,6 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-
-# Get base64 encoded credentials from environment variable
-credentials_base64 = os.environ.get('GOOGLE_CREDENTIALS_BASE64')
-if credentials_base64:
-    # Decode and create a temporary file
-    credentials_json = base64.b64decode(credentials_base64).decode('utf-8')
-    with open('/tmp/google-credentials.json','w') as f:
-        f.write(credentials_json)
-
-    # Set the environment variable to the file path
-    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '/tmp/google-credentials.json'
 
 # Mississippi flag colors
 MISSISSIPPI_BLUE = "#001A57"  # Dark blue

@@ -600,3 +600,128 @@
 2025-03-12 12:20:12,799 - INFO - Retrieved 3812 records from sheet
 2025-03-12 12:20:12,803 - INFO - Processing DataFrame with columns: ['year', 'bill_number', 'title', 'primary_sponsors', 'party', 'district', 'status', 'last_action', 'chamber', 'latest_hearings', 'past_hearings', 'state_bill_link']
 2025-03-12 12:20:13,331 - INFO - 127.0.0.1 - - [12/Mar/2025 12:20:13] "POST /_dash-update-component HTTP/1.1" 200 -
+2025-03-12 14:09:34,661 - INFO - Dash is running on http://0.0.0.0:8051/
+
+2025-03-12 14:09:34,704 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8051
+ * Running on http://192.168.1.83:8051
+2025-03-12 14:09:34,705 - INFO - [33mPress CTRL+C to quit[0m
+2025-03-12 14:09:41,130 - ERROR - Exception on / [GET]
+Traceback (most recent call last):
+  File "C:\Users\bendw\PycharmProjects\PythonProject3\.venv\Lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\bendw\PycharmProjects\PythonProject3\.venv\Lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\bendw\PycharmProjects\PythonProject3\.venv\Lib\site-packages\flask\app.py", line 878, in full_dispatch_request
+    rv = self.preprocess_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\bendw\PycharmProjects\PythonProject3\.venv\Lib\site-packages\flask\app.py", line 1253, in preprocess_request
+    rv = self.ensure_sync(before_func)()
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\bendw\PycharmProjects\PythonProject3\.venv\Lib\site-packages\dash\dash.py", line 1411, in _setup_server
+    _validate.validate_layout(self.layout, self._layout_value())
+  File "C:\Users\bendw\PycharmProjects\PythonProject3\.venv\Lib\site-packages\dash\_validate.py", line 414, in validate_layout
+    raise exceptions.NoLayoutException(
+dash.exceptions.NoLayoutException: The layout was `None` at the time that `run_server` was called.
+Make sure to set the `layout` attribute of your application
+before running the server.
+2025-03-12 14:09:41,154 - INFO - 127.0.0.1 - - [12/Mar/2025 14:09:41] "[35m[1mGET / HTTP/1.1[0m" 500 -
+2025-03-12 14:09:41,329 - INFO - 127.0.0.1 - - [12/Mar/2025 14:09:41] "GET /favicon.ico HTTP/1.1" 200 -
+2025-03-12 14:09:47,509 - INFO - 192.168.1.83 - - [12/Mar/2025 14:09:47] "GET / HTTP/1.1" 200 -
+2025-03-12 14:09:47,557 - INFO - 192.168.1.83 - - [12/Mar/2025 14:09:47] "GET /_dash-component-suites/dash/deps/polyfill@7.v2_18_2m1741632121.12.1.min.js HTTP/1.1" 200 -
+2025-03-12 14:09:47,558 - INFO - 192.168.1.83 - - [12/Mar/2025 14:09:47] "GET /_dash-component-suites/dash/deps/react@16.v2_18_2m1741632121.14.0.min.js HTTP/1.1" 200 -
+2025-03-12 14:09:47,559 - INFO - 192.168.1.83 - - [12/Mar/2025 14:09:47] "GET /_dash-component-suites/dash/deps/react-dom@16.v2_18_2m1741632121.14.0.min.js HTTP/1.1" 200 -
+2025-03-12 14:09:47,561 - INFO - 192.168.1.83 - - [12/Mar/2025 14:09:47] "GET /_dash-component-suites/dash/deps/prop-types@15.v2_18_2m1741632121.8.1.min.js HTTP/1.1" 200 -
+2025-03-12 14:09:47,567 - INFO - 192.168.1.83 - - [12/Mar/2025 14:09:47] "GET /_dash-component-suites/dash/dash-renderer/build/dash_renderer.v2_18_2m1741632121.min.js HTTP/1.1" 200 -
+2025-03-12 14:09:47,567 - INFO - 192.168.1.83 - - [12/Mar/2025 14:09:47] "GET /_dash-component-suites/dash_bootstrap_components/_components/dash_bootstrap_components.v1_7_1m1741632158.min.js HTTP/1.1" 200 -
+2025-03-12 14:09:47,570 - INFO - 192.168.1.83 - - [12/Mar/2025 14:09:47] "GET /_dash-component-suites/dash/dcc/dash_core_components-shared.v2_14_3m1741632121.js HTTP/1.1" 200 -
+2025-03-12 14:09:47,570 - INFO - 192.168.1.83 - - [12/Mar/2025 14:09:47] "GET /_dash-component-suites/dash/dcc/dash_core_components.v2_14_3m1741632121.js HTTP/1.1" 200 -
+2025-03-12 14:09:47,571 - INFO - 192.168.1.83 - - [12/Mar/2025 14:09:47] "GET /_dash-component-suites/dash/html/dash_html_components.v2_0_20m1741632121.min.js HTTP/1.1" 200 -
+2025-03-12 14:09:47,572 - INFO - 192.168.1.83 - - [12/Mar/2025 14:09:47] "GET /_dash-component-suites/dash/dash_table/bundle.v5_2_13m1741632121.js HTTP/1.1" 200 -
+2025-03-12 14:09:47,850 - INFO - 192.168.1.83 - - [12/Mar/2025 14:09:47] "GET /_dash-layout HTTP/1.1" 200 -
+2025-03-12 14:09:47,851 - INFO - 192.168.1.83 - - [12/Mar/2025 14:09:47] "GET /_dash-dependencies HTTP/1.1" 200 -
+2025-03-12 14:09:47,964 - INFO - 192.168.1.83 - - [12/Mar/2025 14:09:47] "GET /favicon.ico HTTP/1.1" 200 -
+2025-03-12 14:09:52,057 - INFO - 127.0.0.1 - - [12/Mar/2025 14:09:52] "GET / HTTP/1.1" 200 -
+2025-03-12 14:09:52,099 - INFO - 127.0.0.1 - - [12/Mar/2025 14:09:52] "GET /_dash-component-suites/dash/deps/polyfill@7.v2_18_2m1741632121.12.1.min.js HTTP/1.1" 200 -
+2025-03-12 14:09:52,105 - INFO - 127.0.0.1 - - [12/Mar/2025 14:09:52] "GET /_dash-component-suites/dash/deps/react@16.v2_18_2m1741632121.14.0.min.js HTTP/1.1" 200 -
+2025-03-12 14:09:52,106 - INFO - 127.0.0.1 - - [12/Mar/2025 14:09:52] "GET /_dash-component-suites/dash/deps/react-dom@16.v2_18_2m1741632121.14.0.min.js HTTP/1.1" 200 -
+2025-03-12 14:09:52,106 - INFO - 127.0.0.1 - - [12/Mar/2025 14:09:52] "GET /_dash-component-suites/dash/deps/prop-types@15.v2_18_2m1741632121.8.1.min.js HTTP/1.1" 200 -
+2025-03-12 14:09:52,108 - INFO - 127.0.0.1 - - [12/Mar/2025 14:09:52] "GET /_dash-component-suites/dash_bootstrap_components/_components/dash_bootstrap_components.v1_7_1m1741632158.min.js HTTP/1.1" 200 -
+2025-03-12 14:09:52,110 - INFO - 127.0.0.1 - - [12/Mar/2025 14:09:52] "GET /_dash-component-suites/dash/dash-renderer/build/dash_renderer.v2_18_2m1741632121.min.js HTTP/1.1" 200 -
+2025-03-12 14:09:52,113 - INFO - 127.0.0.1 - - [12/Mar/2025 14:09:52] "GET /_dash-component-suites/dash/dcc/dash_core_components.v2_14_3m1741632121.js HTTP/1.1" 200 -
+2025-03-12 14:09:52,115 - INFO - 127.0.0.1 - - [12/Mar/2025 14:09:52] "GET /_dash-component-suites/dash/dcc/dash_core_components-shared.v2_14_3m1741632121.js HTTP/1.1" 200 -
+2025-03-12 14:09:52,117 - INFO - 127.0.0.1 - - [12/Mar/2025 14:09:52] "GET /_dash-component-suites/dash/html/dash_html_components.v2_0_20m1741632121.min.js HTTP/1.1" 200 -
+2025-03-12 14:09:52,118 - INFO - 127.0.0.1 - - [12/Mar/2025 14:09:52] "GET /_dash-component-suites/dash/dash_table/bundle.v5_2_13m1741632121.js HTTP/1.1" 200 -
+2025-03-12 14:09:52,348 - INFO - 127.0.0.1 - - [12/Mar/2025 14:09:52] "GET /_dash-layout HTTP/1.1" 200 -
+2025-03-12 14:09:52,358 - INFO - 127.0.0.1 - - [12/Mar/2025 14:09:52] "GET /_dash-dependencies HTTP/1.1" 200 -
+2025-03-12 14:40:26,344 - INFO - Dash is running on http://0.0.0.0:8051/
+
+2025-03-12 14:40:26,359 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8051
+ * Running on http://192.168.1.83:8051
+2025-03-12 14:40:26,359 - INFO - [33mPress CTRL+C to quit[0m
+2025-03-12 14:40:28,495 - INFO - 127.0.0.1 - - [12/Mar/2025 14:40:28] "GET / HTTP/1.1" 200 -
+2025-03-12 14:40:28,677 - INFO - 127.0.0.1 - - [12/Mar/2025 14:40:28] "GET /_dash-component-suites/dash/deps/polyfill@7.v2_18_2m1741632121.12.1.min.js HTTP/1.1" 200 -
+2025-03-12 14:40:28,907 - INFO - 127.0.0.1 - - [12/Mar/2025 14:40:28] "GET /_dash-layout HTTP/1.1" 200 -
+2025-03-12 14:40:28,908 - INFO - 127.0.0.1 - - [12/Mar/2025 14:40:28] "GET /_dash-dependencies HTTP/1.1" 200 -
+2025-03-12 14:40:29,042 - INFO - 127.0.0.1 - - [12/Mar/2025 14:40:29] "GET /_dash-component-suites/dash/dash_table/async-highlight.js HTTP/1.1" 200 -
+2025-03-12 14:40:29,043 - INFO - 127.0.0.1 - - [12/Mar/2025 14:40:29] "GET /_dash-component-suites/dash/dash_table/async-table.js HTTP/1.1" 200 -
+2025-03-12 14:40:29,078 - INFO - 127.0.0.1 - - [12/Mar/2025 14:40:29] "GET /assets/ms_flag.png HTTP/1.1" 200 -
+2025-03-12 14:40:29,234 - INFO - Attempting to load data from Google Sheets
+2025-03-12 14:40:29,234 - INFO - Using existing credentials file at /Users/bendw/Downloads/appleseeddash-ca815365aeef.json
+2025-03-12 14:40:29,237 - INFO - Successfully authenticated with Google
+2025-03-12 14:40:30,114 - INFO - Successfully opened spreadsheet 1XS261QQNcsuVyW-kcdRlxSRAHp1TfIPA4ZEMojY2cz0
+2025-03-12 14:40:30,115 - INFO - Retrieving data (attempt 1/3)...
+2025-03-12 14:40:30,684 - INFO - Retrieved 3812 records from sheet
+2025-03-12 14:40:30,688 - INFO - Processing DataFrame with columns: ['year', 'bill_number', 'title', 'primary_sponsors', 'party', 'district', 'status', 'last_action', 'chamber', 'latest_hearings', 'past_hearings', 'state_bill_link']
+2025-03-12 14:40:31,229 - INFO - 127.0.0.1 - - [12/Mar/2025 14:40:31] "POST /_dash-update-component HTTP/1.1" 200 -
+2025-03-14 10:08:10,730 - INFO - Dash is running on http://0.0.0.0:8051/
+
+2025-03-14 10:08:10,770 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8051
+ * Running on http://192.168.1.83:8051
+2025-03-14 10:08:10,770 - INFO - [33mPress CTRL+C to quit[0m
+2025-03-14 10:08:13,239 - INFO - 127.0.0.1 - - [14/Mar/2025 10:08:13] "GET / HTTP/1.1" 200 -
+2025-03-14 10:08:13,417 - INFO - 127.0.0.1 - - [14/Mar/2025 10:08:13] "GET /_dash-component-suites/dash/deps/polyfill@7.v2_18_2m1741632121.12.1.min.js HTTP/1.1" 200 -
+2025-03-14 10:08:13,439 - INFO - 127.0.0.1 - - [14/Mar/2025 10:08:13] "GET /_dash-component-suites/dash/deps/react@16.v2_18_2m1741632121.14.0.min.js HTTP/1.1" 200 -
+2025-03-14 10:08:13,459 - INFO - 127.0.0.1 - - [14/Mar/2025 10:08:13] "GET /_dash-component-suites/dash/deps/react-dom@16.v2_18_2m1741632121.14.0.min.js HTTP/1.1" 200 -
+2025-03-14 10:08:13,481 - INFO - 127.0.0.1 - - [14/Mar/2025 10:08:13] "GET /_dash-component-suites/dash/deps/prop-types@15.v2_18_2m1741632121.8.1.min.js HTTP/1.1" 200 -
+2025-03-14 10:08:13,482 - INFO - 127.0.0.1 - - [14/Mar/2025 10:08:13] "GET /_dash-component-suites/dash_bootstrap_components/_components/dash_bootstrap_components.v1_7_1m1741632158.min.js HTTP/1.1" 200 -
+2025-03-14 10:08:13,506 - INFO - 127.0.0.1 - - [14/Mar/2025 10:08:13] "GET /_dash-component-suites/dash/dash-renderer/build/dash_renderer.v2_18_2m1741632121.min.js HTTP/1.1" 200 -
+2025-03-14 10:08:13,508 - INFO - 127.0.0.1 - - [14/Mar/2025 10:08:13] "GET /_dash-component-suites/dash/dcc/dash_core_components.v2_14_3m1741632121.js HTTP/1.1" 200 -
+2025-03-14 10:08:13,532 - INFO - 127.0.0.1 - - [14/Mar/2025 10:08:13] "GET /_dash-component-suites/dash/dcc/dash_core_components-shared.v2_14_3m1741632121.js HTTP/1.1" 200 -
+2025-03-14 10:08:13,558 - INFO - 127.0.0.1 - - [14/Mar/2025 10:08:13] "GET /_dash-component-suites/dash/dash_table/bundle.v5_2_13m1741632121.js HTTP/1.1" 200 -
+2025-03-14 10:08:13,597 - INFO - 127.0.0.1 - - [14/Mar/2025 10:08:13] "GET /_dash-component-suites/dash/html/dash_html_components.v2_0_20m1741632121.min.js HTTP/1.1" 200 -
+2025-03-14 10:08:13,956 - INFO - 127.0.0.1 - - [14/Mar/2025 10:08:13] "GET /_dash-layout HTTP/1.1" 200 -
+2025-03-14 10:08:13,998 - INFO - 127.0.0.1 - - [14/Mar/2025 10:08:13] "GET /_dash-dependencies HTTP/1.1" 200 -
+2025-03-14 10:08:14,087 - INFO - 127.0.0.1 - - [14/Mar/2025 10:08:14] "GET /favicon.ico HTTP/1.1" 200 -
+2025-03-14 10:08:14,197 - INFO - 127.0.0.1 - - [14/Mar/2025 10:08:14] "GET /_dash-component-suites/dash/dash_table/async-highlight.js HTTP/1.1" 200 -
+2025-03-14 10:08:14,207 - INFO - 127.0.0.1 - - [14/Mar/2025 10:08:14] "GET /_dash-component-suites/dash/dash_table/async-table.js HTTP/1.1" 200 -
+2025-03-14 10:08:14,219 - INFO - 127.0.0.1 - - [14/Mar/2025 10:08:14] "GET /assets/ms_flag.png HTTP/1.1" 200 -
+2025-03-14 10:08:14,361 - INFO - Attempting to load data from Google Sheets
+2025-03-14 10:08:14,361 - INFO - Using existing credentials file at /Users/bendw/Downloads/appleseeddash-ca815365aeef.json
+2025-03-14 10:08:14,364 - INFO - Successfully authenticated with Google
+2025-03-14 10:08:15,609 - INFO - Successfully opened spreadsheet 1XS261QQNcsuVyW-kcdRlxSRAHp1TfIPA4ZEMojY2cz0
+2025-03-14 10:08:15,609 - INFO - Retrieving data (attempt 1/3)...
+2025-03-14 10:08:16,131 - INFO - Retrieved 3812 records from sheet
+2025-03-14 10:08:16,134 - INFO - Processing DataFrame with columns: ['year', 'bill_number', 'title', 'primary_sponsors', 'party', 'district', 'status', 'last_action', 'chamber', 'latest_hearings', 'past_hearings', 'state_bill_link']
+2025-03-14 10:08:16,690 - INFO - 127.0.0.1 - - [14/Mar/2025 10:08:16] "POST /_dash-update-component HTTP/1.1" 200 -
+2025-03-14 10:08:43,518 - INFO - 127.0.0.1 - - [14/Mar/2025 10:08:43] "GET / HTTP/1.1" 200 -
+2025-03-14 10:08:43,632 - INFO - 127.0.0.1 - - [14/Mar/2025 10:08:43] "GET /_dash-layout HTTP/1.1" 200 -
+2025-03-14 10:08:43,632 - INFO - 127.0.0.1 - - [14/Mar/2025 10:08:43] "GET /_dash-dependencies HTTP/1.1" 200 -
+2025-03-14 10:08:43,763 - INFO - 127.0.0.1 - - [14/Mar/2025 10:08:43] "GET /assets/ms_flag.png HTTP/1.1" 200 -
+2025-03-14 10:08:43,764 - INFO - 127.0.0.1 - - [14/Mar/2025 10:08:43] "GET /_dash-component-suites/dash/dash_table/async-highlight.js HTTP/1.1" 200 -
+2025-03-14 10:08:43,764 - INFO - 127.0.0.1 - - [14/Mar/2025 10:08:43] "[36mGET /_dash-component-suites/dash/dash_table/async-table.js HTTP/1.1[0m" 304 -
+2025-03-14 10:08:43,839 - INFO - Attempting to load data from Google Sheets
+2025-03-14 10:08:43,839 - INFO - Using existing credentials file at /Users/bendw/Downloads/appleseeddash-ca815365aeef.json
+2025-03-14 10:08:43,842 - INFO - Successfully authenticated with Google
+2025-03-14 10:08:44,385 - INFO - Successfully opened spreadsheet 1XS261QQNcsuVyW-kcdRlxSRAHp1TfIPA4ZEMojY2cz0
+2025-03-14 10:08:44,385 - INFO - Retrieving data (attempt 1/3)...
+2025-03-14 10:08:44,880 - INFO - Retrieved 3812 records from sheet
+2025-03-14 10:08:44,883 - INFO - Processing DataFrame with columns: ['year', 'bill_number', 'title', 'primary_sponsors', 'party', 'district', 'status', 'last_action', 'chamber', 'latest_hearings', 'past_hearings', 'state_bill_link']
+2025-03-14 10:08:45,421 - INFO - 127.0.0.1 - - [14/Mar/2025 10:08:45] "POST /_dash-update-component HTTP/1.1" 200 -
