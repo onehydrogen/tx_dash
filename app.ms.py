@@ -32,7 +32,7 @@ load_dotenv()
 # Constants
 PAGE_SIZE = int(os.getenv('PAGE_SIZE','10'))
 API_KEY = os.getenv('API_KEY','292df5e11916f68de328be25cd942133')
-SPREADSHEET_ID = os.getenv('SPREADSHEET_ID','1XS261QQNcsuVyW-kcdRlxSRAHp1TfIPA4ZEMojY2cz0')
+SPREADSHEET_ID = os.getenv('SPREADSHEET_ID','1rAr0zk40C7NK8yeNB4tLpTSqFFET8S77LaU4AC2xRrE')
 CREDENTIALS_PATH = os.getenv('CREDENTIALS_PATH','/Users/bendw/Downloads/appleseeddash-ca815365aeef.json')
 DEBUG_MODE = os.getenv('DEBUG_MODE','False').lower() == 'true'
 
