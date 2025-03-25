@@ -3,7 +3,17 @@ import pathlib
 import os
 import dash
 import dash_bootstrap_components as dbc
-from dash import dcc,html,dash_table,ctx
+from dash import dcc, html, dash_table
+try:
+    from dash import callback_context
+    ctx = callback_context
+except ImportError:
+    try:
+        from dash.callback_context import callback_context
+        ctx = callback_context
+    except ImportError:
+        # For older versions of Dash
+        from dash import ctx
 from dash.dependencies import Input,Output,State
 import pandas as pd
 import logging
@@ -1002,9 +1012,9 @@ app.layout = html.Div([
      State("bills-table","data")],
     prevent_initial_call=False
 )
-def update_dashboard(search_clicks,clear_clicks,pathname,search_value,original_data,current_data):
-    """Callback to update dashboard components with Texas-specific tracking."""
+def update_dashboard(search_clicks, clear_clicks, pathname, search_value, original_data, current_data):
     triggered_id = ctx.triggered_id if ctx.triggered_id is not None else 'url'
+    # Rest of your function...
 
     try:
         # Load initial data if none exists
