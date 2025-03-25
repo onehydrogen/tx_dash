@@ -20,11 +20,27 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+from flask import Flask, send_from_directory
 
-# Mississippi flag colors
-MISSISSIPPI_BLUE = "#001A57"  # Dark blue
-MISSISSIPPI_GOLD = "#D2B447"  # Gold/yellow
-MISSISSIPPI_RED = "#BF0D3E"  # Red
+
+server = Flask(__name__)
+app = dash.Dash(
+    __name__,
+    server=server,
+    external_stylesheets=[
+        dbc.themes.FLATLY,
+        "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+    ]
+)
+# Add route to serve static files
+@server.route('/assets/<path:path>')
+def serve_static(path):
+    return send_from_directory('assets', path)
+
+# Texas flag colors
+TEXAS_BLUE = "#00205B"  # Dark blue
+TEXAS_RED = "#BF0D3E"  # Red
+TEXAS_WHITE = "#FFFFFF"  # White
 
 # Load environment variables
 load_dotenv()
@@ -32,7 +48,7 @@ load_dotenv()
 # Constants
 PAGE_SIZE = int(os.getenv('PAGE_SIZE','10'))
 API_KEY = os.getenv('API_KEY','292df5e11916f68de328be25cd942133')
-SPREADSHEET_ID = os.getenv('SPREADSHEET_ID','1rAr0zk40C7NK8yeNB4tLpTSqFFET8S77LaU4AC2xRrE')
+SPREADSHEET_ID = os.getenv('SPREADSHEET_ID','1kDpbeWjHAgCLsurCWA0QWJaXoKCO2mupq_-UaGSmbUA')
 CREDENTIALS_PATH = os.getenv('CREDENTIALS_PATH','/Users/bendw/Downloads/appleseeddash-ca815365aeef.json')
 DEBUG_MODE = os.getenv('DEBUG_MODE','False').lower() == 'true'
 
@@ -46,7 +62,7 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler('legislative_dashboard_debug.log')
+        logging.FileHandler('texas_legislative_dashboard_debug.log')
     ]
 )
 logger = logging.getLogger(__name__)
@@ -73,54 +89,95 @@ def format_hearing_date(hearing_str):
         return hearing_str
 
 
-def standardize_mississippi_status(last_action):
+def standardize_texas_status(status_desc,last_action):
     """
-    Standardizes bill status values based on Mississippi-specific terminology
-    in the last_action field.
+    Standardizes bill status values based on Texas-specific terminology.
     """
-    if pd.isna(last_action):
+    if pd.isna(status_desc):
         return 'active'
 
+    status_desc = str(status_desc).lower().strip()
     last_action = str(last_action).lower().strip()
 
-    # MS-specific terminology for passed bills
-    if any(term in last_action for term in [
-        'is now act','became act','approved by the governor','signed by governor',
-        'became law without signature'
-    ]):
+    # Texas-specific terminology for passed bills
+    if any(term in status_desc for term in ['passed','enrolled','effective','signed']):
+        return 'passed'
+    if 'sent to governor' in last_action:
         return 'passed'
 
-    # MS-specific terminology for failed bills
-    if any(term in last_action for term in [
-        'died in house','died in senate','died in committee',
-        'sine die','withdrawn','failed','vetoed','died on calendar',
-        'died on motion to reconsider'
-    ]):
+    # Texas-specific terminology for failed bills
+    if any(term in status_desc for term in ['died','failed','vetoed','withdrawn']):
+        return 'failed'
+    if any(term in last_action for term in ['died','failed','vetoed','withdrawn']):
         return 'failed'
 
-    # For MS, bills can be "held on calendar" which is a special status
-    if 'held on calendar' in last_action:
-        return 'held'
+    # Bills in process
+    if any(term in status_desc for term in ['engrossed','reported','referred']):
+        return 'in_process'
 
     # Default to active for anything else
     return 'active'
 
 
+def determine_tx_stage(status_desc,last_action):
+    """
+    Determines the specific Texas legislative stage based on status and last action.
+    """
+    if pd.isna(status_desc):
+        return 'prefiled'
+
+    status_desc = str(status_desc).lower().strip()
+    last_action = str(last_action).lower().strip()
+
+    # Determine stage based on Texas-specific terminology
+    if any(term in status_desc for term in ['introduced','filed']):
+        return 'prefiled'
+
+    if any(term in status_desc for term in ['referred','committee']):
+        return 'in_committee'
+
+    if any(term in status_desc for term in ['reported','favorable']):
+        return 'passed_committee'
+
+    if any(term in status_desc for term in ['engrossed','calendar']):
+        return 'floor_action'
+
+    if 'passed house' in last_action and ('to senate' in last_action or 'transmitted to senate' in last_action):
+        return 'in_second_chamber'
+    elif 'passed senate' in last_action and ('to house' in last_action or 'transmitted to house' in last_action):
+        return 'in_second_chamber'
+    elif any(term in last_action for term in ['passed house','passed senate']):
+        return 'passed_orig_chamber'
+
+    if any(term in status_desc for term in ['enrolled','passed both']):
+        return 'passed_both'
+
+    if any(term in last_action for term in ['sent to governor','transmitted to governor']):
+        return 'sent_to_governor'
+
+    if any(term in status_desc for term in ['effective','signed']):
+        return 'signed'
+
+    if 'vetoed' in status_desc or 'vetoed' in last_action:
+        return 'vetoed'
+
+    if any(term in status_desc for term in ['died','failed']):
+        return 'died'
+
+    return 'in_committee'
+
+
 def get_sample_data():
     """Returns sample data when actual data is unavailable."""
     return pd.DataFrame({
-        'year': ['2025','2025'],
+        'year': ['2023','2023'],
         'bill_number': ['HB1234','SB5678'],
         'title': ['Sample Bill 1','Sample Bill 2'],
-        'primary_sponsors': ['John Doe','Jane Smith'],
-        'party': ['D','R'],
-        'district': ['District 1','District 2'],
-        'status': ['active','active'],
-        'last_action': ['Filed','In Committee'],
-        'chamber': ['House','Senate'],
-        'latest_hearings': ['N/A','N/A'],
-        'past_hearings': ['N/A','N/A'],
-        'state_bill_link': ['','']
+        'status_desc': ['Introduced','Engrossed'],
+        'last_action': ['Referred to Committee','Reported favorably'],
+        'status': ['active','in_process'],
+        'stage': ['prefiled','in_committee'],
+        'state_link': ['','']
     })
 
 
@@ -261,105 +318,79 @@ def load_google_sheets_data():
 
 
 def parse_contents(df):
-    """Parses DataFrame and standardizes the data format."""
+    """Parses DataFrame and standardizes the Texas data format."""
     try:
         logger.info(f"Processing DataFrame with columns: {df.columns.tolist()}")
 
+        # Basic column renaming
         column_mapping = {
             'bill_number': 'bill_number',
             'title': 'title',
+            'status_desc': 'status_desc',
             'last_action': 'last_action',
-            'sponsor_name': 'primary_sponsors',
-            'sponsor_party': 'party',
-            'sponsor_district': 'district',
-            'session_year': 'year',
-            'state_bill_link': 'state_bill_link',
-            'latest_hearings': 'latest_hearings',
-            'past_hearings': 'past_hearings'
+            'state_link': 'state_link',
+            'status_date': 'status_date'
         }
 
         df_processed = df.rename(columns=column_mapping)
 
-        # Process hearing dates
-        if 'latest_hearings' in df_processed.columns:
-            df_processed['latest_hearings'] = df_processed['latest_hearings'].apply(format_hearing_date)
-        if 'past_hearings' in df_processed.columns:
-            df_processed['past_hearings'] = df_processed['past_hearings'].apply(format_hearing_date)
-
-        # Extract co-sponsors
-        if 'co_sponsors' not in df_processed.columns:
-            if 'description' in df.columns:
-                df_processed['co_sponsors'] = df['description'].apply(
-                    lambda x: '; '.join(re.findall(r'Rep/. [A-Za-z/s]+(?:,|$)',str(x))) if pd.notna(x) else 'N/A'
-                )
+        # Extract year from bill number or status date
+        if 'year' not in df_processed.columns:
+            if 'status_date' in df_processed.columns:
+                df_processed['year'] = pd.to_datetime(df_processed['status_date']).dt.year.astype(str)
             else:
-                df_processed['co_sponsors'] = 'N/A'
+                df_processed['year'] = '2023'  # Default to current session
 
-        # Determine chamber
-        if 'chamber' not in df_processed.columns:
-            df_processed['chamber'] = df_processed['bill_number'].apply(
-                lambda x: 'House' if str(x).startswith('H') else 'Senate'
-            )
+        # Standardize status using Texas-specific function
+        df_processed['status'] = df_processed.apply(
+            lambda row: standardize_texas_status(row['status_desc'],row['last_action']),
+            axis=1
+        )
 
-        # Standardize status using Mississippi-specific function
-        df_processed['status'] = df_processed['last_action'].apply(standardize_mississippi_status)
+        # Determine stage
+        df_processed['stage'] = df_processed.apply(
+            lambda row: determine_tx_stage(row['status_desc'],row['last_action']),
+            axis=1
+        )
 
         # Process links
-        if 'state_bill_link' in df_processed.columns:
-            df_processed['state_bill_link'] = df_processed['state_bill_link'].apply(
-                lambda x: f"[View Bill]({x})" if pd.notna(x) else ""
+        if 'state_link' in df_processed.columns:
+            df_processed['state_link'] = df_processed['state_link'].apply(
+                lambda x: f"[View Bill]({x})" if pd.notna(x) and str(x).startswith('http') else ""
             )
             df_processed['bill_number'] = df_processed.apply(
                 lambda
-                    row: f"[{row['bill_number']}]({row['state_bill_link'].replace('[View Bill]','').replace('(','').replace(')','')})"
-                if pd.notna(row['state_bill_link']) and row['state_bill_link'] != ""
+                    row: f"[{row['bill_number']}]({row['state_link'].replace('[View Bill]','').replace('(','').replace(')','')})"
+                if pd.notna(row['state_link']) and row['state_link'] != ""
                 else row['bill_number'],
                 axis=1
             )
 
-        # Group by bill number
-        grouped_df = df_processed.groupby('bill_number').agg({
-            'year': 'first',
-            'title': 'first',
-            'status': 'last',
-            'last_action': 'last',
-            'primary_sponsors': 'first',
-            'co_sponsors': 'first',
-            'party': 'first',
-            'district': 'first',
-            'chamber': 'first',
-            'state_bill_link': 'first',
-            'latest_hearings': lambda x: '; '.join(filter(lambda v: v != 'N/A',x.unique())),
-            'past_hearings': lambda x: '; '.join(filter(lambda v: v != 'N/A',x.unique()))
-        }).reset_index()
+        # Fill NA values
+        df_processed = df_processed.fillna('N/A')
 
-        return grouped_df.fillna('N/A')
+        # Select and order columns
+        final_columns = [
+            'year','bill_number','title','status_desc',
+            'last_action','status','stage','state_link'
+        ]
+
+        # Only include columns that exist in the dataframe
+        final_columns = [col for col in final_columns if col in df_processed.columns]
+
+        return df_processed[final_columns]
 
     except Exception as e:
         logger.error(f"Error processing CSV: {e}")
         return get_sample_data()
 
 
-def track_mississippi_bill_progress(df):
+def track_texas_bill_progress(df):
     """
-    Tracks bill progression through Mississippi-specific legislative stages.
-
-    Mississippi legislative process:
-    1. Prefiled/Introduced
-    2. Referred to Committee
-    3. Passed Committee
-    4. Floor Action in Original Chamber
-    5. Passed Original Chamber
-    6. Sent to Second Chamber
-    7. Committee Action in Second Chamber
-    8. Floor Action in Second Chamber
-    9. Passed Second Chamber
-    10. Conference Committee (if differences)
-    11. Sent to Governor
-    12. Governor Action (signed/vetoed)
+    Tracks bill progression through Texas-specific legislative stages.
     """
     try:
-        # Initialize counters for Mississippi-specific stages
+        # Initialize counters for Texas-specific stages
         progress_stats = {
             'prefiled': 0,
             'in_committee': 0,
@@ -374,70 +405,8 @@ def track_mississippi_bill_progress(df):
             'died': 0
         }
 
-        def determine_ms_stage(last_action):
-            """Determines Mississippi-specific bill stage based on last action."""
-            if pd.isna(last_action):
-                return 'prefiled'
-
-            last_action = str(last_action).lower()
-
-            # Governor action
-            if any(term in last_action for term in [
-                'signed by governor','is now act','became act','approved by the governor'
-            ]):
-                return 'signed'
-
-            if 'vetoed by governor' in last_action:
-                return 'vetoed'
-
-            # Governor consideration phase
-            if any(term in last_action for term in [
-                'to governor','transmitted to governor','sent to governor'
-            ]):
-                return 'sent_to_governor'
-
-            # Both chambers passed
-            if 'both houses' in last_action or 'enrolled' in last_action:
-                return 'passed_both'
-
-            # Second chamber
-            if any(term in last_action for term in [
-                'transmitted to house','transmitted to senate',
-                'received from house','received from senate'
-            ]):
-                return 'in_second_chamber'
-
-            # Passed original chamber
-            if 'passed' in last_action and ('house' in last_action or 'senate' in last_action):
-                return 'passed_orig_chamber'
-
-            # Floor action in original chamber
-            if any(term in last_action for term in [
-                'third reading','second reading','first reading',
-                'floor vote','floor debate','on calendar'
-            ]):
-                return 'floor_action'
-
-            # Committee action
-            if 'committee report' in last_action or 'reported out' in last_action:
-                return 'passed_committee'
-
-            if any(term in last_action for term in [
-                'referred to committee','in committee','committee assignment'
-            ]):
-                return 'in_committee'
-
-            # Check for died status - MS specific terminology
-            if any(term in last_action for term in [
-                'died in','died on calendar','sine die','withdrawn','failed'
-            ]):
-                return 'died'
-
-            # Default to prefiled/introduced
-            return 'prefiled'
-
         for _,row in df.iterrows():
-            stage = determine_ms_stage(row['last_action'])
+            stage = row['stage'] if 'stage' in df.columns else determine_tx_stage(row['status_desc'],row['last_action'])
             progress_stats[stage] += 1
 
         total_bills = len(df)
@@ -452,101 +421,14 @@ def track_mississippi_bill_progress(df):
         }
 
     except Exception as e:
-        logger.error(f"Error in track_mississippi_bill_progress: {e}")
+        logger.error(f"Error in track_texas_bill_progress: {e}")
         return None
 
 
-def calculate_mississippi_bill_outcomes(df):
-    """Calculates bill outcomes with Mississippi-specific categories."""
-    try:
-        # Standard outcomes
-        status_counts = {
-            'passed': 0,
-            'failed': 0,
-            'active': 0,
-            'held': 0  # Mississippi-specific category for bills held on calendar
-        }
-
-        # Count bills by Mississippi-specific status
-        for _,row in df.iterrows():
-            status = standardize_mississippi_status(row['last_action'])
-            status_counts[status] += 1
-
-        total_bills = len(df)
-        status_percentages = {
-            status: (count / total_bills * 100) if total_bills > 0 else 0
-            for status,count in status_counts.items()
-        }
-
-        return {
-            'counts': status_counts,
-            'percentages': status_percentages
-        }
-
-    except Exception as e:
-        logger.error(f"Error calculating Mississippi bill outcomes: {e}")
-        return None
-
-
-def create_mississippi_outcomes_display(outcomes_data):
-    """Creates the bill outcomes display component with Mississippi styling."""
-    try:
-        if not outcomes_data:
-            return html.P("No outcome data available",className="text-muted")
-
-        # Mississippi flag color scheme
-        ms_blue = "#001A57"  # Dark blue
-        ms_gold = "#D2B447"  # Gold/yellow
-        ms_red = "#BF0D3E"  # Red
-
-        return html.Div([
-            html.Div([
-                # Use colors from the Mississippi flag
-                html.P([
-                    html.Strong("Passed: "),
-                    f"{outcomes_data['counts']['passed']} bills ",
-                    html.Span(
-                        f"({outcomes_data['percentages']['passed']:.1f}%)",
-                        className="percentage-badge",
-                        style={"background-color": "#2f855a"}  # Green for passed
-                    )
-                ],className="mb-2"),
-                html.P([
-                    html.Strong("Failed/Died: "),
-                    f"{outcomes_data['counts']['failed']} bills ",
-                    html.Span(
-                        f"({outcomes_data['percentages']['failed']:.1f}%)",
-                        className="percentage-badge",
-                        style={"background-color": ms_red}  # MS red for failed
-                    )
-                ],className="mb-2"),
-                html.P([
-                    html.Strong("Active: "),
-                    f"{outcomes_data['counts']['active']} bills ",
-                    html.Span(
-                        f"({outcomes_data['percentages']['active']:.1f}%)",
-                        className="percentage-badge",
-                        style={"background-color": ms_blue}  # MS blue for active
-                    )
-                ],className="mb-2"),
-                html.P([
-                    html.Strong("Held on Calendar: "),
-                    f"{outcomes_data['counts']['held']} bills ",
-                    html.Span(
-                        f"({outcomes_data['percentages']['held']:.1f}%)",
-                        className="percentage-badge",
-                        style={"background-color": ms_gold}  # MS gold for held
-                    )
-                ],className="mb-2"),
-            ],className="pl-4 border-l-4",style={"border-color": ms_gold})
-        ])
-    except Exception as e:
-        logger.error(f"Error creating Mississippi outcomes display: {e}")
-        return html.P("Error displaying outcome data",className="text-danger")
-
-
-def create_mississippi_progress_tracker(progress_data):
-    """Creates the progress tracker display component with Mississippi styling."""
+def create_texas_progress_tracker(progress_data):
+    """
+    Creates the progress tracker display component with Texas styling.
+    """
     try:
         if not progress_data:
             return html.P("No progress data available",className="text-muted")
@@ -663,67 +545,111 @@ def create_mississippi_progress_tracker(progress_data):
             ])
         ])
     except Exception as e:
-        logger.error(f"Error creating Mississippi progress tracker: {e}")
+        logger.error(f"Error creating Texas progress tracker: {e}")
         return html.P("Error displaying progress data",className="text-danger")
 
 
-def create_hearings_card(df,search_performed=False):
-    """Creates a card displaying latest hearing information."""
+def calculate_texas_bill_outcomes(df):
+    """Calculates bill outcomes with Texas-specific categories."""
     try:
-        if not search_performed:
-            return html.Div([
-                html.H5("Hearing Schedule",className="mb-3"),
-                dbc.Card(
-                    dbc.CardBody([
-                        html.P("Use search bar to display latest hearing info",
-                               className="text-muted text-center")
-                    ]),
-                    className="shadow-sm"
-                )
-            ])
+        # Standard outcomes
+        status_counts = {
+            'passed': 0,
+            'failed': 0,
+            'in_process': 0,
+            'active': 0
+        }
 
-        if 'latest_hearing_data' not in df.columns:
-            return html.P("Latest hearing information not available",className="text-muted")
+        # Count bills by Texas-specific status
+        for _,row in df.iterrows():
+            status = row['status'] if 'status' in df.columns else standardize_texas_status(row['status_desc'],
+                                                                                           row['last_action'])
+            status_counts[status] += 1
 
-        latest_hearings = df[df['latest_hearing_data'].notna() & (df['latest_hearing_data'] != 'N/A')]
+        total_bills = len(df)
+        status_percentages = {
+            status: (count / total_bills * 100) if total_bills > 0 else 0
+            for status,count in status_counts.items()
+        }
+
+        return {
+            'counts': status_counts,
+            'percentages': status_percentages
+        }
+
+    except Exception as e:
+        logger.error(f"Error calculating Texas bill outcomes: {e}")
+        return None
+
+
+def create_texas_outcomes_display(outcomes_data):
+    """Creates the bill outcomes display component with Texas styling."""
+    try:
+        if not outcomes_data:
+            return html.P("No outcome data available",className="text-muted")
 
         return html.Div([
-            html.H5("Latest Hearing Information",className="mb-3"),
-            dbc.Card(
-                dbc.CardBody([
-                    html.Div([
-                        html.Div([
-                            html.P([
-                                html.Strong(row['bill_number']),": ",
-                                row['latest_hearing_data']
-                            ],className="mb-2")
-                            for _,row in latest_hearings.iterrows()
-                        ]) if not latest_hearings.empty else html.P("No hearing information available")
-                    ])
-                ]),
-                className="shadow-sm"
-            )
+            html.Div([
+                # Use colors from the Texas flag
+                html.P([
+                    html.Strong("Passed: "),
+                    f"{outcomes_data['counts']['passed']} bills ",
+                    html.Span(
+                        f"({outcomes_data['percentages']['passed']:.1f}%)",
+                        className="percentage-badge",
+                        style={"background-color": "#2f855a"}  # Green for passed
+                    )
+                ],className="mb-2"),
+                html.P([
+                    html.Strong("Failed/Died: "),
+                    f"{outcomes_data['counts']['failed']} bills ",
+                    html.Span(
+                        f"({outcomes_data['percentages']['failed']:.1f}%)",
+                        className="percentage-badge",
+                        style={"background-color": TEXAS_RED}
+                    )
+                ],className="mb-2"),
+                html.P([
+                    html.Strong("In Process: "),
+                    f"{outcomes_data['counts']['in_process']} bills ",
+                    html.Span(
+                        f"({outcomes_data['percentages']['in_process']:.1f}%)",
+                        className="percentage-badge",
+                        style={"background-color": TEXAS_BLUE}
+                    )
+                ],className="mb-2"),
+                html.P([
+                    html.Strong("Active: "),
+                    f"{outcomes_data['counts']['active']} bills ",
+                    html.Span(
+                        f"({outcomes_data['percentages']['active']:.1f}%)",
+                        className="percentage-badge",
+                        style={"background-color": TEXAS_WHITE,"color": TEXAS_BLUE}
+                    )
+                ],className="mb-2"),
+            ],className="pl-4 border-l-4",style={"border-color": TEXAS_RED})
         ])
     except Exception as e:
-        logger.error(f"Error creating hearings card: {e}")
-        return html.P("Error loading hearing information",className="text-danger")
+        logger.error(f"Error creating Texas outcomes display: {e}")
+        return html.P("Error displaying outcome data",className="text-danger")
 
 
 def calculate_sponsor_stats(df,search_value):
-    """Calculates comprehensive sponsorship statistics with Mississippi-specific status."""
+    """Calculates comprehensive sponsorship statistics with Texas-specific status."""
     try:
         bill_outcomes = defaultdict(int)
-        primary_bills = df[df['primary_sponsors'].str.contains(search_value,case=False,na=False)]
+        primary_bills = df[df['title'].str.contains(search_value,case=False,na=False)]
 
         num_primary = len(primary_bills)
         total_bills = len(df)
         primary_percentage = (num_primary / total_bills * 100) if total_bills > 0 else 0
 
         for _,row in primary_bills.iterrows():
-            status = standardize_mississippi_status(row['last_action'])
+            status = row['status'] if 'status' in df.columns else standardize_texas_status(row['status_desc'],
+                                                                                           row['last_action'])
             bill_outcomes[status] += 1
 
-        # Calculate success rate with Mississippi-specific categories
+        # Calculate success rate with Texas-specific categories
         completed_bills = bill_outcomes['passed'] + bill_outcomes['failed']
         bill_outcomes['total'] = num_primary
         bill_outcomes['success_rate'] = (
@@ -731,7 +657,7 @@ def calculate_sponsor_stats(df,search_value):
             if completed_bills > 0 else 0
         )
 
-        progress_analysis = track_mississippi_bill_progress(primary_bills)
+        progress_analysis = track_texas_bill_progress(primary_bills)
 
         return {
             'primary_bills': num_primary,
@@ -761,17 +687,17 @@ app.index_string = '''
 <html>
     <head>
         {%metas%}
-        <title>Legislative Analytics Dashboard</title>
+        <title>Texas Legislative Analytics Dashboard</title>
         {%css%}
         <style>
-            /* Mississippi Flag Colors:
-               - Dark Blue: #001A57
-               - Gold/Yellow: #D2B447 
-               - Red: #BF0D3E
+            /* Texas Flag Colors:
+               - Dark Blue: #00205B
+               - Red: #BF0D3E 
+               - White: #FFFFFF
             */
 
             body {
-                background-color: #001A57; /* Dark blue background */
+                background-color: #00205B; /* Dark blue background */
             }
 
             .container-fluid {
@@ -790,7 +716,7 @@ app.index_string = '''
 
             .card { 
                 transition: transform 0.2s;
-                border-left: 4px solid #D2B447; /* Gold color from Mississippi flag */
+                border-left: 4px solid #BF0D3E; /* Red color from Texas flag */
             }
 
             .card:hover { 
@@ -798,14 +724,14 @@ app.index_string = '''
             }
 
             .dashboard-title { 
-                background: linear-gradient(120deg, #BF0D3E, #001A57); /* Red to blue gradient */
+                background: linear-gradient(120deg, #00205B, #BF0D3E); /* Blue to red gradient */
                 color: white;
                 padding: 2rem;
                 border-radius: 10px;
                 margin-bottom: 2rem;
-                border:4px solid #D2B447; /* Gold border */
+                border: 4px solid white;
             }
-            
+
             .percentage-badge {
                 background-color: #BF0D3E; /* Red color */
                 color: white;
@@ -813,83 +739,84 @@ app.index_string = '''
                 border-radius: 9999px;
                 font-size: 0.875rem;
             }
-            
+
             .navbar { 
-                background-color: #BF0D3E !important; /* Red color for navbar */
-                border-bottom: 3px solid #D2B447; /* Gold border */
+                background-color: #00205B !important; /* Dark blue color for navbar */
+                border-bottom: 3px solid #BF0D3E; /* Red border */
             }
-            
+
             .btn-primary { 
-                background-color: #D2B447; /* Gold color for primary buttons */
-                border-color: #D2B447; 
-                color: #001A57; /* Dark blue text */
+                background-color: #BF0D3E; /* Red color for primary buttons */
+                border-color: #BF0D3E; 
+                color: white;
                 font-weight: bold;
             }
-            
+
             .btn-primary:hover { 
-                background-color: #B89D3B; /* Darker gold on hover */
-                border-color: #B89D3B; 
+                background-color: #9A0B32; /* Darker red on hover */
+                border-color: #9A0B32; 
             }
-            
+
             .btn-secondary {
-                background-color: #001A57; /* Dark blue for secondary buttons */
-                border-color: #001A57;
+                background-color: #00205B; /* Dark blue for secondary buttons */
+                border-color: #00205B;
+                color: white;
             }
-            
+
             .btn-secondary:hover {
-                background-color: #00134A; /* Darker blue on hover */
-                border-color: #00134A;
+                background-color: #001A4A; /* Darker blue on hover */
+                border-color: #001A4A;
             }
-            
+
             .text-primary { 
-                color: #001A57 !important; /* Dark blue color for primary text */
+                color: #00205B !important; /* Dark blue color for primary text */
             }
-            
+
             /* Card header styling */
             .card-header {
-                background-color: #001A57;
+                background-color: #00205B;
                 color: white;
             }
-            
+
             /* Table styling */
             .dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th {
-                background-color: #001A57;
+                background-color: #00205B;
                 color: white;
                 font-weight: bold;
             }
-            
+
             .dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner tr:nth-child(even) {
                 background-color: #f2f2f2;
             }
-            
+
             /* Footer styling */
             footer {
-                background-color: #BF0D3E;
+                background-color: #00205B;
                 color: white;
                 padding: 1rem;
-                border-top: 3px solid #D2B447;
+                border-top: 3px solid #BF0D3E;
                 margin-top: 2rem;
                 border-radius: 0 0 10px 10px;
             }
-            
+
             /* Custom scrollbar */
             ::-webkit-scrollbar {
                 width: 10px;
                 height: 10px;
             }
-            
+
             ::-webkit-scrollbar-track {
                 background: #f1f1f1;
                 border-radius: 10px;
             }
-            
+
             ::-webkit-scrollbar-thumb {
-                background: #D2B447;
+                background: #BF0D3E;
                 border-radius: 10px;
             }
-            
+
             ::-webkit-scrollbar-thumb:hover {
-                background: #B89D3B;
+                background: #9A0B32;
             }
         </style>
     </head>
@@ -907,10 +834,9 @@ app.index_string = '''
 # Navigation bar with logo
 navbar = dbc.NavbarSimple(
     children=[
-
         dbc.NavItem(dbc.NavLink("About", href="https://www.sankofastrategists.com/", target="_blank")),
     ],
-    brand=html.Img(src="/assets/ms_flag.png",height="40px"),  # Update this line
+    brand=html.Img(src="/assets/tx_flag.png", height="40px", style={"margin-right": "10px"}),
     brand_href="#",
     color="primary",
     dark=True,
@@ -924,28 +850,28 @@ search_section = dbc.Card(
             dbc.Col([
                 dbc.Input(
                     id="search-bar",
-                    placeholder="Search Bills, Sponsors, or Topics...",
+                    placeholder="Search Bills or Topics...",
                     type="text",
                     className="mb-3"
                 ),
-            ], width=8),
+            ],width=8),
             dbc.Col([
-                dbc.Button("Search", id="search-button", color="primary", className="mr-2"),
-                dbc.Button("Clear", id="clear-search", color="secondary")
-            ], width=4)
+                dbc.Button("Search",id="search-button",color="primary",className="mr-2"),
+                dbc.Button("Clear",id="clear-search",color="secondary"),
+            ],width=4)
         ])
     ]),
     className="mb-4"
 )
 
 
-def create_stat_card(title, icon, content):
+def create_stat_card(title,icon,content):
     return dbc.Card(
         dbc.CardBody([
-            html.H4([html.I(className=f"fas {icon} mr-2"), title],
+            html.H4([html.I(className=f"fas {icon} mr-2"),title],
                     className="text-primary"),
             html.Hr(),
-            html.Div(id=content, className="mt-3")
+            html.Div(id=content,className="mt-3")
         ]),
         className="mb-4 shadow-sm"
     )
@@ -954,7 +880,7 @@ def create_stat_card(title, icon, content):
 # Main layout
 app.layout = html.Div([
     dcc.Store(id='original-data'),
-    dcc.Location(id='url', refresh=False),
+    dcc.Location(id='url',refresh=False),
 
     # Error Alert
     dbc.Alert(
@@ -968,55 +894,52 @@ app.layout = html.Div([
     dbc.Container([
         # Title section
         html.Div([
-            html.H1("Mississippi Legislative Tracker", className="mb-0"),
-            html.P("Track, Analyze, and Understand Legislative Data",
+            html.H1("Texas Legislative Tracker",className="mb-0"),
+            html.P("Track, Analyze, and Understand Texas Legislative Data",
                    className="lead mb-0")
-        ], className="dashboard-title text-center mb-4"),
+        ],className="dashboard-title text-center mb-4"),
 
         search_section,
 
         # Stats cards
         dbc.Row([
             dbc.Col(create_stat_card(
-                "Sponsorship Overview",
-                "fa-users",
-                "sponsorship-stats"
-            ), md=3),
+                "Legislation Overview",
+                "fa-file-alt",
+                "legislation-stats"
+            ),md=3),
             dbc.Col(create_stat_card(
                 "Bill Outcomes",
                 "fa-chart-pie",
                 "bill-outcomes"
-            ), md=3),
+            ),md=3),
             dbc.Col(create_stat_card(
                 "Bill Progress",
                 "fa-tasks",
                 "progress-tracker"
-            ), md=3),
+            ),md=3),
             dbc.Col(create_stat_card(
-                "Hearing Schedule",
-                "fa-calendar",
-                "hearing-schedule"
-            ), md=3),
-        ]),
+                "Legislative Activity",
+                "fa-calendar-alt",
+                "activity-stats"
+            ),md=3),
+        ],className="mb-4"),
 
         # Bills table
         dbc.Card(
             dbc.CardBody([
-                html.H3("Bills Overview", className="mb-4"),
+                html.H3("Bills Overview",className="mb-4"),
                 dash_table.DataTable(
                     id="bills-table",
                     columns=[
-                        {"name": "Year", "id": "year"},
-                        {"name": "Bill Number", "id": "bill_number", "presentation": "markdown"},
-                        {"name": "Title", "id": "title"},
-                        {"name": "Primary Sponsor", "id": "primary_sponsors"},
-                        {"name": "Party", "id": "party"},
-                        {"name": "District", "id": "district"},
-                        {"name": "Status", "id": "status"},
-                        {"name": "Last Action", "id": "last_action"},
-                        {"name": "Chamber", "id": "chamber"},
-                        {"name": "Past Hearings", "id": "past_hearings"},
-                        {"name": "Link", "id": "state_bill_link", "presentation": "markdown"}
+                        {"name": "Year","id": "year"},
+                        {"name": "Bill Number","id": "bill_number","presentation": "markdown"},
+                        {"name": "Title","id": "title"},
+                        {"name": "Status","id": "status_desc"},
+                        {"name": "Last Action","id": "last_action"},
+                        {"name": "Current Status","id": "status"},
+                        {"name": "Stage","id": "stage"},
+                        {"name": "Link","id": "state_link","presentation": "markdown"}
                     ],
                     style_table={'overflowX': 'auto'},
                     style_cell={
@@ -1057,31 +980,30 @@ app.layout = html.Div([
                 )
             ])
         )
-    ], fluid=True)
+    ],fluid=True)
 ])
 
 
 # Callbacks
 @app.callback(
-    [Output("bills-table", "data"),
-     Output('sponsorship-stats', 'children'),
-     Output('bill-outcomes', 'children'),
-     Output('progress-tracker', 'children'),
-     Output('hearing-schedule', 'children'),
-     Output('original-data', 'data'),
-     Output('error-message', 'children'),
-     Output('error-message', 'is_open'),
-     Output('error-message', 'color')],
-    [Input('search-button', 'n_clicks'),
-     Input('clear-search', 'n_clicks'),
-     Input('url', 'pathname')],
-    [State("search-bar", "value"),
-     State("original-data", "data"),
-     State("bills-table", "data")],
+    [Output("bills-table","data"),
+     Output('legislation-stats','children'),
+     Output('bill-outcomes','children'),
+     Output('progress-tracker','children'),
+     Output('original-data','data'),
+     Output('error-message','children'),
+     Output('error-message','is_open'),
+     Output('error-message','color')],
+    [Input('search-button','n_clicks'),
+     Input('clear-search','n_clicks'),
+     Input('url','pathname')],
+    [State("search-bar","value"),
+     State("original-data","data"),
+     State("bills-table","data")],
     prevent_initial_call=False
 )
-def update_dashboard(search_clicks, clear_clicks, pathname, search_value, original_data, current_data):
-    """Callback to update dashboard components with Mississippi-specific tracking."""
+def update_dashboard(search_clicks,clear_clicks,pathname,search_value,original_data,current_data):
+    """Callback to update dashboard components with Texas-specific tracking."""
     triggered_id = ctx.triggered_id if ctx.triggered_id is not None else 'url'
 
     try:
@@ -1090,133 +1012,97 @@ def update_dashboard(search_clicks, clear_clicks, pathname, search_value, origin
             # Load data from Google Sheets
             df = load_google_sheets_data()
             if df.empty:
-                return [], "No data", "No data", "No data", "No data", None, "No data available", True, "warning"
+                return [],"No data","No data","No data",{},"No data available",True,"warning"
 
             # Create initial overview statistics
             overview_stats = html.Div([
-                html.P(f"Total Bills: {len(df)}", className="stat-item"),
-                html.P(f"Unique Sponsors: {df['primary_sponsors'].nunique()}", className="stat-item")
+                html.P(f"Total Bills: {len(df)}",className="stat-item"),
+                html.P(f"Passed Bills: {len(df[df['status'] == 'passed'])}",className="stat-item")
             ])
 
-            # Mississippi-specific bill outcomes
-            ms_outcomes = calculate_mississippi_bill_outcomes(df)
-            bill_outcomes = create_mississippi_outcomes_display(ms_outcomes)
+            # Texas-specific bill outcomes
+            tx_outcomes = calculate_texas_bill_outcomes(df)
+            bill_outcomes = create_texas_outcomes_display(tx_outcomes)
 
-            # Mississippi-specific progress tracking
-            progress_data = track_mississippi_bill_progress(df)
-            progress_tracker = create_mississippi_progress_tracker(progress_data)
+            # Texas-specific progress tracking
+            progress_data = track_texas_bill_progress(df)
+            progress_tracker = create_texas_progress_tracker(progress_data)
 
-            hearing_schedule = create_hearings_card(df)
+            return (df.to_dict('records'),overview_stats,bill_outcomes,progress_tracker,
+                    df.to_dict('records'),None,False,"success")
 
-            return (df.to_dict('records'), overview_stats, bill_outcomes, progress_tracker,
-                    hearing_schedule, df.to_dict('records'), None, False, "success")
+        # Handle search and clear operations
+        df = pd.DataFrame(original_data)
 
-        # Handle search functionality
+        if triggered_id == 'clear-search':
+            return (df.to_dict('records'),
+                    html.Div([
+                        html.P(f"Total Bills: {len(df)}",className="stat-item"),
+                        html.P(f"Passed Bills: {len(df[df['status'] == 'passed'])}",className="stat-item")
+                    ]),
+                    create_texas_outcomes_display(calculate_texas_bill_outcomes(df)),
+                    create_texas_progress_tracker(track_texas_bill_progress(df)),
+                    original_data,
+                    "Search cleared",True,"success")
+
         if triggered_id == 'search-button' and search_value:
-            df = pd.DataFrame(original_data)
-            filtered_df = df[
-                df['bill_number'].str.contains(search_value, case=False, na=False) |
-                df['title'].str.contains(search_value, case=False, na=False) |
-                df['primary_sponsors'].str.contains(search_value, case=False, na=False)
-            ]
+            search_value = search_value.strip()
+            if not search_value:
+                return (df.to_dict('records'),
+                        html.Div([
+                            html.P(f"Total Bills: {len(df)}",className="stat-item"),
+                            html.P(f"Passed Bills: {len(df[df['status'] == 'passed'])}",className="stat-item")
+                        ]),
+                        create_texas_outcomes_display(calculate_texas_bill_outcomes(df)),
+                        create_texas_progress_tracker(track_texas_bill_progress(df)),
+                        original_data,
+                        "Please enter a search term",True,"warning")
+
+            # Filter the DataFrame based on search value
+            filtered_df = df[df.apply(lambda row: row.astype(str).str.contains(search_value,case=False).any(),axis=1)]
 
             if filtered_df.empty:
-                return ([], "No results", "No results", "No results", "No results",
-                        original_data, f"No results found for '{search_value}'", True, "warning")
+                return (df.to_dict('records'),
+                        html.Div([
+                            html.P(f"Total Bills: {len(df)}",className="stat-item"),
+                            html.P(f"Passed Bills: {len(df[df['status'] == 'passed'])}",className="stat-item")
+                        ]),
+                        create_texas_outcomes_display(calculate_texas_bill_outcomes(df)),
+                        create_texas_progress_tracker(track_texas_bill_progress(df)),
+                        original_data,
+                        "No results found",True,"warning")
 
-            # For sponsor searches, show sponsor-specific stats
-            if any(sponsor for sponsor in df['primary_sponsors'].unique()
-                   if search_value.lower() in str(sponsor).lower()):
+            # Calculate stats for search results
+            overview_stats = html.Div([
+                html.P(f"Matching Bills: {len(filtered_df)}",className="stat-item"),
+                html.P(f"Search Term: {search_value}",className="stat-item")
+            ])
 
-                # Basic sponsorship overview
-                sponsor_bills = filtered_df[filtered_df['primary_sponsors'].str.contains(search_value, case=False, na=False)]
-                sponsor_name = search_value
+            return (filtered_df.to_dict('records'),
+                    overview_stats,
+                    create_texas_outcomes_display(calculate_texas_bill_outcomes(filtered_df)),
+                    create_texas_progress_tracker(track_texas_bill_progress(filtered_df)),
+                    original_data,
+                    f"Found {len(filtered_df)} results",True,"success")
 
-                # Count bills with Mississippi-specific status classifications
-                ms_sponsor_outcomes = {
-                    'passed': 0,
-                    'failed': 0,
-                    'active': 0,
-                    'held': 0
-                }
-
-                for _, row in sponsor_bills.iterrows():
-                    status = standardize_mississippi_status(row['last_action'])
-                    ms_sponsor_outcomes[status] += 1
-
-                total_sponsor_bills = len(sponsor_bills)
-                success_rate = (ms_sponsor_outcomes['passed'] / total_sponsor_bills * 100) if total_sponsor_bills > 0 else 0
-
-                stats_display = html.Div([
-                    html.P([
-                        html.Strong(f"Sponsor: "),
-                        sponsor_name
-                    ], className="stat-item"),
-                    html.P(f"Total Bills: {total_sponsor_bills}", className="stat-item"),
-                    html.P(f"Success Rate: {success_rate:.1f}%", className="stat-item")
-                ])
-
-                # Sponsor bill outcomes using Mississippi-specific categories
-                ms_outcomes = calculate_mississippi_bill_outcomes(sponsor_bills)
-                outcomes = create_mississippi_outcomes_display(ms_outcomes)
-
-                # Sponsor bill progress using Mississippi-specific stages
-                ms_progress = track_mississippi_bill_progress(sponsor_bills)
-                progress = create_mississippi_progress_tracker(ms_progress)
-
-            else:
-                # For non-sponsor searches, just show filtered data stats
-                overview_stats = html.Div([
-                    html.P(f"Results: {len(filtered_df)}", className="stat-item"),
-                    html.P(f"Showing bills matching: '{search_value}'", className="stat-item")
-                ])
-
-                # Mississippi-specific bill outcomes for filtered results
-                ms_outcomes = calculate_mississippi_bill_outcomes(filtered_df)
-                outcomes = create_mississippi_outcomes_display(ms_outcomes)
-
-                # Mississippi-specific progress tracking for filtered results
-                ms_progress = track_mississippi_bill_progress(filtered_df)
-                progress = create_mississippi_progress_tracker(ms_progress)
-
-                stats_display = overview_stats
-
-            hearings = create_hearings_card(filtered_df, search_performed=True)
-
-            return (filtered_df.to_dict('records'), stats_display, outcomes, progress,
-                    hearings, original_data, None, False, "success")
-
-        # Handle clear functionality
-        elif triggered_id == 'clear-search':
-            if original_data:
-                df = pd.DataFrame(original_data)
-                overview_stats = html.Div([
-                    html.P(f"Total Bills: {len(df)}", className="stat-item"),
-                    html.P(f"Unique Sponsors: {df['primary_sponsors'].nunique()}", className="stat-item")
-                ])
-
-                # Mississippi-specific bill outcomes
-                ms_outcomes = calculate_mississippi_bill_outcomes(df)
-                bill_outcomes = create_mississippi_outcomes_display(ms_outcomes)
-
-                # Mississippi-specific progress tracking
-                progress_data = track_mississippi_bill_progress(df)
-                progress_tracker = create_mississippi_progress_tracker(progress_data)
-
-                hearing_schedule = create_hearings_card(df)
-
-                return (df.to_dict('records'), overview_stats, bill_outcomes, progress_tracker,
-                        hearing_schedule, original_data, None, False, "success")
-
-        return current_data or [], "No data", "No data", "No data", "No data", original_data, None, False, "success"
+        # Default return if no specific action
+        return (df.to_dict('records'),
+                html.Div([
+                    html.P(f"Total Bills: {len(df)}",className="stat-item"),
+                    html.P(f"Passed Bills: {len(df[df['status'] == 'passed'])}",className="stat-item")
+                ]),
+                create_texas_outcomes_display(calculate_texas_bill_outcomes(df)),
+                create_texas_progress_tracker(track_texas_bill_progress(df)),
+                original_data,
+                None,False,"success")
 
     except Exception as e:
         logger.error(f"Error in dashboard update: {e}")
-        return (current_data or [], "Error", "Error", "Error", "Error", original_data,
-                f"An error occurred: {str(e)}", True, "danger")
+        return (current_data or [],"Error","Error","Error",
+                original_data,f"An error occurred: {str(e)}",True,"danger")
 
 
 if __name__ == '__main__':
     # Use the PORT environment variable for Heroku
-    port = int(os.environ.get('PORT', 8051))
-    app.run_server(debug=DEBUG_MODE, host='0.0.0.0', port=port)
+    port = int(os.environ.get('PORT',8051))
+    app.run_server(debug=DEBUG_MODE,host='0.0.0.0',port=port)
