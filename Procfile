@@ -1,1 +1,1 @@
-web: gunicorn tx_app:server
+web: gunicorn test:server
