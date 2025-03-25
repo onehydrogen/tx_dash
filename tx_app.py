@@ -1004,8 +1004,13 @@ app.layout = html.Div([
      State("bills-table","data")],
     prevent_initial_call=False
 )
-def update_dashboard(search_clicks, clear_clicks, pathname, search_value, original_data, current_data):
-    triggered_id = callback_context.triggered_id if callback_context.triggered_id is not None else 'url'
+def update_dashboard(search_clicks,clear_clicks,pathname,search_value,original_data,current_data):
+    # Access triggered_id using the correct syntax for Dash 2.0.0
+    if callback_context.triggered:
+        triggered_id = callback_context.triggered[0]['prop_id'].split('.')[0]
+    else:
+        triggered_id = 'url'
+
     try:
         # Load initial data if none exists
         if original_data is None:
@@ -1020,6 +1025,7 @@ def update_dashboard(search_clicks, clear_clicks, pathname, search_value, origin
                 html.P(f"Passed Bills: {len(df[df['status'] == 'passed'])}",className="stat-item")
             ])
 
+            # Rest of your function as before...
             # Texas-specific bill outcomes
             tx_outcomes = calculate_texas_bill_outcomes(df)
             bill_outcomes = create_texas_outcomes_display(tx_outcomes)
