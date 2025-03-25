@@ -4,16 +4,9 @@ import os
 import dash
 import dash_bootstrap_components as dbc
 from dash import dcc, html, dash_table
-try:
-    from dash import callback_context
-    ctx = callback_context
-except ImportError:
-    try:
-        from dash.callback_context import callback_context
-        ctx = callback_context
-    except ImportError:
-        # For older versions of Dash
-        from dash import ctx
+from dash import dcc, html, dash_table
+from dash.dependencies import Input, Output, State
+from dash import callback_context
 from dash.dependencies import Input,Output,State
 import pandas as pd
 import logging
@@ -841,18 +834,17 @@ app.index_string = '''
 </html>
 '''
 
-# Navigation bar with logo
+# With this
 navbar = dbc.NavbarSimple(
     children=[
         dbc.NavItem(dbc.NavLink("About", href="https://www.sankofastrategists.com/", target="_blank")),
     ],
-    brand=html.Img(src="/assets/tx_flag.png", height="40px", style={"margin-right": "10px"}),
+    brand="Texas Legislative Tracker", # Change to text instead of image
     brand_href="#",
     color="primary",
     dark=True,
     className="mb-4"
 )
-
 # Search section
 search_section = dbc.Card(
     dbc.CardBody([
@@ -1013,9 +1005,7 @@ app.layout = html.Div([
     prevent_initial_call=False
 )
 def update_dashboard(search_clicks, clear_clicks, pathname, search_value, original_data, current_data):
-    triggered_id = ctx.triggered_id if ctx.triggered_id is not None else 'url'
-    # Rest of your function...
-
+    triggered_id = callback_context.triggered_id if callback_context.triggered_id is not None else 'url'
     try:
         # Load initial data if none exists
         if original_data is None:
