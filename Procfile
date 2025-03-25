@@ -1,1 +1,1 @@
-﻿web: python app.ms.py
+web: gunicorn tx_app:server
